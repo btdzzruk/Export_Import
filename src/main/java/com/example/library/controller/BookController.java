@@ -24,7 +24,7 @@ public class BookController {
     private final BookService bookService;
 
     @GetMapping
-    public ResponseEntity<APIResponse<PageData<Book>>> findAllStudents(
+    public ResponseEntity<APIResponse<PageData<Book>>> findAllBooks(
             @RequestParam(name = "page", defaultValue = "1") int page,
             @RequestParam(name = "size", defaultValue = "5") int size) {
 
