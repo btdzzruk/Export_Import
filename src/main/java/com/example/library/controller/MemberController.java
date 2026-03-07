@@ -12,6 +12,9 @@ import org.springframework.core.io.ByteArrayResource;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
+
+import java.io.IOException;
 
 @RestController
 @RequestMapping("/api/members")
@@ -59,6 +62,34 @@ public class MemberController {
                     .body(resource);
         } catch (Exception e) {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("Lỗi khi xuất dữ liệu: " + e.getMessage());
+        }
+    }
+
+    @PostMapping("/import")
+    public ResponseEntity<?> importMembers(@RequestParam("file") MultipartFile file) {
+
+        try {
+
+            memberService.importMembersFromExcel(file);
+
+            return ResponseEntity.ok(
+                    new APIResponse<>(true, "Import thành công", null)
+            );
+
+        } catch (RuntimeException e) {
+
+            return ResponseEntity.badRequest()
+                    .body(new APIResponse<>(false, e.getMessage(), null));
+
+        } catch (IOException e) {
+
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(new APIResponse<>(false, "Lỗi file Excel: " + e.getMessage(), null));
+
+        } catch (Exception e) {
+
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(new APIResponse<>(false, "Lỗi import Excel: " + e.getMessage(), null));
         }
     }
 }

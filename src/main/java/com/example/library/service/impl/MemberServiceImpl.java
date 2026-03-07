@@ -1,7 +1,11 @@
 package com.example.library.service.impl;
 
 import com.example.library.model.ExcelExporter;
+import com.example.library.model.ExcelImporter;
+import com.example.library.model.dto.ImportBookDTO;
+import com.example.library.model.dto.ImportMemberDTO;
 import com.example.library.model.dto.MemberExportDTO;
+import com.example.library.model.entity.Book;
 import com.example.library.model.entity.Member;
 import com.example.library.model.request.MemberAddDTO;
 import com.example.library.model.request.MemberUpdateDTO;
@@ -15,6 +19,7 @@ import org.springframework.core.io.ByteArrayResource;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
@@ -147,6 +152,36 @@ public class MemberServiceImpl implements MemberService {
         }
     }
 
+    @Override
+    public void importMembersFromExcel(MultipartFile file) throws IOException {
+        try {
+
+            if (file == null || file.isEmpty()) {
+                throw new RuntimeException("File Excel không được rỗng!");
+            }
+
+            List<ImportMemberDTO> importData =
+                    ExcelImporter.importFromExcel(
+                            file.getInputStream(),
+                            ImportMemberDTO.class
+                    );
+
+            if (importData == null || importData.isEmpty()) {
+                throw new RuntimeException("File Excel không có dữ liệu!");
+            }
+
+            List<Member> members = buildMembers(importData);
+
+            memberRepository.saveAll(members);
+
+        } catch (RuntimeException e) {
+            throw e;
+        } catch (Exception e) {
+            throw new IOException("Lỗi khi import Excel: " + e.getMessage(), e);
+        }
+    }
+
+    // Hàm này sẽ chuyển đổi danh sách Member thành danh sách MemberExportDTO để xuất Excel
     private List<MemberExportDTO> buildMemberExportData(List<Member> members) {
         AtomicLong counter = new AtomicLong(1);
         return members.stream().map(member -> {
@@ -157,6 +192,29 @@ public class MemberServiceImpl implements MemberService {
             dto.setEmail(member.getEmail());
             dto.setPhone(member.getPhone());
             return dto;
+        }).toList();
+    }
+
+    // Hàm này sẽ kiểm tra trùng email và phone trước khi tạo đối tượng Member
+    private List<Member> buildMembers(List<ImportMemberDTO> importData) {
+
+        return importData.stream().map(dto -> {
+
+            if (memberRepository.existsByEmail(dto.getEmail())) {
+                throw new RuntimeException("Email đã tồn tại: " + dto.getEmail());
+            }
+
+            if (memberRepository.existsByPhone(dto.getPhone())) {
+                throw new RuntimeException("Số điện thoại đã tồn tại: " + dto.getPhone());
+            }
+
+            Member member = new Member();
+            member.setCode(dto.getCode());
+            member.setFullName(dto.getName());
+            member.setEmail(dto.getEmail());
+            member.setPhone(dto.getPhone());
+            return member;
+
         }).toList();
     }
 }
