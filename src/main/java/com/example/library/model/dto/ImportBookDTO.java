@@ -26,4 +26,10 @@ public class ImportBookDTO {
 
     @ExcelColumn(col = 5, title = "Giá", type = com.example.library.model.ColCellType._DOLLARS)
     private Double price;
+
+    @ExcelColumn(col = 6, title = "Status", type = ColCellType._STRING)
+    private String status;
+
+    @ExcelColumn(col = 7, title = "Description", type = ColCellType._STRING)
+    private String description;
 }

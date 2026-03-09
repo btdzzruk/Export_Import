@@ -2,10 +2,8 @@ package com.example.library.service.impl;
 
 import com.example.library.model.ExcelExporter;
 import com.example.library.model.ExcelImporter;
-import com.example.library.model.dto.ImportBookDTO;
 import com.example.library.model.dto.ImportMemberDTO;
 import com.example.library.model.dto.MemberExportDTO;
-import com.example.library.model.entity.Book;
 import com.example.library.model.entity.Member;
 import com.example.library.model.request.MemberAddDTO;
 import com.example.library.model.request.MemberUpdateDTO;
@@ -23,6 +21,7 @@ import org.springframework.web.multipart.MultipartFile;
 
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicLong;
 
@@ -153,32 +152,74 @@ public class MemberServiceImpl implements MemberService {
     }
 
     @Override
-    public void importMembersFromExcel(MultipartFile file) throws IOException {
-        try {
-
-            if (file == null || file.isEmpty()) {
-                throw new RuntimeException("File Excel không được rỗng!");
-            }
-
-            List<ImportMemberDTO> importData =
-                    ExcelImporter.importFromExcel(
-                            file.getInputStream(),
-                            ImportMemberDTO.class
-                    );
-
-            if (importData == null || importData.isEmpty()) {
-                throw new RuntimeException("File Excel không có dữ liệu!");
-            }
-
-            List<Member> members = buildMembers(importData);
-
-            memberRepository.saveAll(members);
-
-        } catch (RuntimeException e) {
-            throw e;
-        } catch (Exception e) {
-            throw new IOException("Lỗi khi import Excel: " + e.getMessage(), e);
+    public ByteArrayResource importMembersFromExcel(MultipartFile file) throws IOException {
+        if (file == null || file.isEmpty()) {
+            throw new RuntimeException("File Import không được rỗng!");
         }
+
+        List<ImportMemberDTO> importData =
+                ExcelImporter.importFromExcel(
+                        file.getInputStream(),
+                        ImportMemberDTO.class
+                );
+
+        List<Member> validMembers = new ArrayList<>();
+
+        for (ImportMemberDTO dto : importData) {
+
+            StringBuilder error = new StringBuilder();
+
+            if (dto.getCode() == null || dto.getCode().isBlank()) {
+                error.append("Mã thành viên không được rỗng; ");
+            }
+
+            if (dto.getName() == null || dto.getName().isBlank()) {
+                error.append("Tên thành viên không được để trống !; ");
+            }
+
+            if (dto.getEmail() == null || dto.getEmail().isBlank()) {
+                error.append("Email không được để trống !; ");
+            }
+
+            if (dto.getPhone() == null || dto.getPhone().isBlank()) {
+                error.append("Số điện thoại không được để trống !; ");
+            }
+
+            if (memberRepository.existsByEmail(dto.getEmail())) {
+                error.append("Email đã tồn tại !; ");
+            }
+
+            if (memberRepository.existsByPhone(dto.getPhone())) {
+                error.append("Số điện thoại đã tồn tại !; ");
+            }
+
+            if (error.length() > 0) {
+
+                dto.setStatus("FAIL");
+                dto.setDescription(error.toString());
+
+            } else {
+
+                dto.setStatus("TRUE");
+                dto.setDescription("VALID");
+
+                Member member = new Member();
+                member.setCode(dto.getCode());
+                member.setFullName(dto.getName());
+                member.setEmail(dto.getEmail());
+                member.setPhone(dto.getPhone());
+                validMembers.add(member);
+            }
+        }
+
+        if (!validMembers.isEmpty()) {
+            memberRepository.saveAll(validMembers);
+        }
+
+        ByteArrayOutputStream outputStream =
+                ExcelExporter.exportToExcel(importData, null);
+
+        return new ByteArrayResource(outputStream.toByteArray());
     }
 
     // Hàm này sẽ chuyển đổi danh sách Member thành danh sách MemberExportDTO để xuất Excel

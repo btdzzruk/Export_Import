@@ -24,5 +24,5 @@ public interface MemberService {
 
     ByteArrayResource exportMembersToExcel() throws IOException;
 
-    void importMembersFromExcel(MultipartFile file) throws IOException;
+    ByteArrayResource importMembersFromExcel(MultipartFile file) throws IOException;
 }

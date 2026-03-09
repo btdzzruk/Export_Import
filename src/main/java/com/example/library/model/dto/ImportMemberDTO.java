@@ -23,4 +23,10 @@ public class ImportMemberDTO {
 
     @ExcelColumn(col = 4, title = "Số điện thoại", type = ColCellType._STRING)
     private String phone;
+
+    @ExcelColumn(col = 5, title = "Status", type = ColCellType._STRING)
+    private String status;
+
+    @ExcelColumn(col = 6, title = "Description", type = ColCellType._STRING)
+    private String description;
 }

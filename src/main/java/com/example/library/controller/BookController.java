@@ -79,26 +79,17 @@ public class BookController {
 
         try {
 
-            bookService.importBooksFromExcel(file);
+            ByteArrayResource resource = bookService.importBooksFromExcel(file);
 
-            return ResponseEntity.ok(
-                    new APIResponse<>(true, "Import thành công", null)
-            );
-
-        } catch (RuntimeException e) {
-
-            return ResponseEntity.badRequest()
-                    .body(new APIResponse<>(false, e.getMessage(), null));
-
-        } catch (IOException e) {
-
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body(new APIResponse<>(false, "Lỗi file Excel: " + e.getMessage(), null));
+            return ResponseEntity.ok()
+                    .header("Content-Disposition", "attachment; filename=Import_Result.xlsx")
+                    .header("Content-Type", "application/octet-stream")
+                    .body(resource);
 
         } catch (Exception e) {
 
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body(new APIResponse<>(false, "Lỗi import Excel: " + e.getMessage(), null));
+            return ResponseEntity.badRequest()
+                    .body(new APIResponse<>(false, e.getMessage(), null));
         }
     }
 }

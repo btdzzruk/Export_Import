@@ -23,6 +23,7 @@ import org.springframework.web.multipart.MultipartFile;
 
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicLong;
 
@@ -34,6 +35,7 @@ public class BookServiceImpl implements BookService {
     private final BookMapper bookMapper;
 
     private static final int DEFAULT_PAGE_SIZE = 5;
+    private static final int MAX_EXCEL_ROWS = 1_048_575;
 
     @Override
     public APIResponse<PageData<Book>> findAllBook(int page, int size) {
@@ -128,24 +130,24 @@ public class BookServiceImpl implements BookService {
     @Override
     public ByteArrayResource exportBooksToExcel() throws IOException {
         try {
+
             List<Book> books = bookRepository.findAll();
 
-            if (books == null || books.isEmpty()) {
+            // kiểm tra số lượng row
+            if (books.size() > MAX_EXCEL_ROWS) {
+                throw new RuntimeException(
+                        "Số lượng dữ liệu vượt quá giới hạn Excel (" + MAX_EXCEL_ROWS + " rows)"
+                );
+            }
+
+            if (books.isEmpty()) {
                 throw new RuntimeException("Không có dữ liệu để xuất file Excel!");
             }
 
             List<ExportDTO> exportData = buildExportDTOs(books);
 
-            if (exportData == null || exportData.isEmpty()) {
-                throw new RuntimeException("Không thể chuyển đổi dữ liệu để xuất!");
-            }
-
             ByteArrayOutputStream outputStream =
                     ExcelExporter.exportToExcel(exportData, null);
-
-            if (outputStream == null || outputStream.toByteArray().length == 0) {
-                throw new RuntimeException("Xuất Excel thất bại - file rỗng!");
-            }
 
             return new ByteArrayResource(outputStream.toByteArray());
 
@@ -157,33 +159,78 @@ public class BookServiceImpl implements BookService {
     }
 
     @Override
-    public void importBooksFromExcel(MultipartFile file) throws IOException {
+    public ByteArrayResource importBooksFromExcel(MultipartFile file) throws IOException {
 
-        try {
-
-            if (file == null || file.isEmpty()) {
-                throw new RuntimeException("File Excel không được rỗng!");
-            }
-
-            List<ImportBookDTO> importData =
-                    ExcelImporter.importFromExcel(
-                            file.getInputStream(),
-                            ImportBookDTO.class
-                    );
-
-            if (importData == null || importData.isEmpty()) {
-                throw new RuntimeException("File Excel không có dữ liệu!");
-            }
-
-            List<Book> books = buildBooks(importData);
-
-            bookRepository.saveAll(books);
-
-        } catch (RuntimeException e) {
-            throw e;
-        } catch (Exception e) {
-            throw new IOException("Lỗi khi import Excel: " + e.getMessage(), e);
+        if (file == null || file.isEmpty()) {
+            throw new RuntimeException("File Excel không được rỗng!");
         }
+
+        List<ImportBookDTO> importData =
+                ExcelImporter.importFromExcel(
+                        file.getInputStream(),
+                        ImportBookDTO.class
+                );
+
+        List<Book> validBooks = new ArrayList<>();
+
+        for (ImportBookDTO dto : importData) {
+
+            StringBuilder error = new StringBuilder();
+
+            if (dto.getCode() == null || dto.getCode().isBlank()) {
+                error.append("Mã sách không được để trống !");
+            }
+
+            if (dto.getTitle() == null || dto.getTitle().isBlank()) {
+                error.append("Tiêu đề sách không được để trống !; ");
+            }
+
+            if (dto.getAuthor() == null || dto.getAuthor().isBlank()) {
+                error.append("Tác giả không được để trống !; ");
+            }
+
+            if (dto.getQuantity() == null || dto.getQuantity() <= 0) {
+                error.append("Số lượng phải > 0; ");
+            }
+
+            if (dto.getPrice() == null || dto.getPrice() < 100) {
+                error.append("Giá phải >= 100; ");
+            }
+
+            if (bookRepository.existsByTitle(dto.getTitle())) {
+                error.append("Tiêu đề sách đã tồn tại !; ");
+            }
+
+            if (error.length() > 0) {
+
+                dto.setStatus("FAIL");
+                dto.setDescription(error.toString());
+
+            } else {
+
+                dto.setStatus("TRUE");
+                dto.setDescription("VALID");
+
+                Book book = new Book();
+
+                book.setCode(dto.getCode());
+                book.setTitle(dto.getTitle());
+                book.setAuthor(dto.getAuthor());
+                book.setQuantity(dto.getQuantity());
+                book.setPrice(dto.getPrice());
+
+                validBooks.add(book);
+            }
+        }
+
+        if (!validBooks.isEmpty()) {
+            bookRepository.saveAll(validBooks);
+        }
+
+        ByteArrayOutputStream outputStream =
+                ExcelExporter.exportToExcel(importData, null);
+
+        return new ByteArrayResource(outputStream.toByteArray());
     }
 
     // Xây dựng danh sách ExportDTO từ danh sách Book để xuất Excel

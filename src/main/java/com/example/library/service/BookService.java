@@ -8,7 +8,6 @@ import com.example.library.model.response.PageData;
 import org.springframework.core.io.ByteArrayResource;
 import org.springframework.web.multipart.MultipartFile;
 
-import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 
 public interface BookService {
@@ -24,5 +23,5 @@ public interface BookService {
 
     ByteArrayResource exportBooksToExcel() throws IOException;
 
-    void importBooksFromExcel(MultipartFile file) throws IOException;
+    ByteArrayResource importBooksFromExcel(MultipartFile file) throws IOException;
 }
