@@ -204,4 +204,49 @@ public class ExcelExporter {
             }
         }
     }
+
+    public static <T> ByteArrayOutputStream exportToExcelMultiSheet(List<T> data, String sheetBaseName) {
+        ByteArrayOutputStream out = new ByteArrayOutputStream();
+
+        try (Workbook workbook = new XSSFWorkbook()) {
+
+            if (data == null || data.isEmpty()) {
+                workbook.createSheet(sheetBaseName);
+                workbook.write(out);
+                out.flush();
+                return out;
+            }
+
+            Class<?> clazz = data.get(0).getClass();
+            Field[] fields = clazz.getDeclaredFields();
+
+            // MAX_ROWS_PER_SHEET = 1_048_575 (giới hạn Excel trừ 1 row header)
+            final int MAX_ROWS_PER_SHEET = 1_048_575;
+            int totalSheets = (int) Math.ceil((double) data.size() / MAX_ROWS_PER_SHEET);
+
+            for (int s = 0; s < totalSheets; s++) {
+                String sheetName = totalSheets == 1
+                        ? sheetBaseName
+                        : sheetBaseName + "_" + (s + 1);
+                Sheet sheet = workbook.createSheet(sheetName);
+
+                createHeaderRow(sheet, workbook, fields);
+
+                int fromIndex = s * MAX_ROWS_PER_SHEET;
+                int toIndex = Math.min(fromIndex + MAX_ROWS_PER_SHEET, data.size());
+                List<T> chunk = data.subList(fromIndex, toIndex);
+
+                createDataRows(sheet, chunk, fields);
+                autoSizeColumns(sheet, fields);
+            }
+
+            workbook.write(out);
+            out.flush();
+            return out;
+
+        } catch (Exception e) {
+            logger.severe("Failed to export multi-sheet Excel: " + e.getMessage());
+            throw new RuntimeException("Export Excel failed: " + e.getMessage(), e);
+        }
+    }
 }
