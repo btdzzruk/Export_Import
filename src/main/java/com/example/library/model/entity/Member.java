@@ -6,6 +6,8 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 
+import java.time.LocalDateTime;
+
 @Entity
 @Table(name = "members")
 @NoArgsConstructor
@@ -21,7 +23,7 @@ public class Member {
     @Column(name = "code", nullable = false, length = 20, unique = true)
     private String code;
 
-    @Column(name = "fullName", nullable = false, length = 50, unique = true)
+    @Column(name = "fullName", nullable = false, length = 50)
     private String fullName;
 
     @Column(name = "email", nullable = false, length = 50, unique = true)
@@ -29,4 +31,22 @@ public class Member {
 
     @Column(name = "phone", nullable = false, length = 15)
     private String phone;
+
+    @Column(name = "created_at", nullable = false)
+    private LocalDateTime createdAt; // thời gian tạo
+
+    @Column(name = "updated_at", nullable = false)
+    private LocalDateTime updatedAt; // thời gian update gần nhất
+
+    // Tự động set createdAt và updateAt
+    @PrePersist
+    public void prePersist() {
+        this.createdAt = LocalDateTime.now();
+        this.updatedAt = LocalDateTime.now();
+    }
+
+    @PreUpdate
+    public void preUpdate() {
+        this.updatedAt = LocalDateTime.now();
+    }
 }

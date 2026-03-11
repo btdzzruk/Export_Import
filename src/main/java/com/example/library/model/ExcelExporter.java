@@ -205,39 +205,58 @@ public class ExcelExporter {
         }
     }
 
-    public static <T> ByteArrayOutputStream exportToExcelMultiSheet(List<T> data, String sheetBaseName) {
+    public static <T> ByteArrayOutputStream exportStreaming(
+            Iterable<List<T>> pages,
+            Class<T> clazz,
+            String sheetBaseName,
+            int maxRowsPerSheet
+    ) {
+
         ByteArrayOutputStream out = new ByteArrayOutputStream();
 
         try (Workbook workbook = new XSSFWorkbook()) {
 
-            if (data == null || data.isEmpty()) {
-                workbook.createSheet(sheetBaseName);
-                workbook.write(out);
-                out.flush();
-                return out;
-            }
-
-            Class<?> clazz = data.get(0).getClass();
             Field[] fields = clazz.getDeclaredFields();
 
-            // MAX_ROWS_PER_SHEET = 1_048_575 (giới hạn Excel trừ 1 row header)
-            final int MAX_ROWS_PER_SHEET = 1_048_575;
-            int totalSheets = (int) Math.ceil((double) data.size() / MAX_ROWS_PER_SHEET);
+            Sheet sheet = workbook.createSheet(sheetBaseName);
+            createHeaderRow(sheet, workbook, fields);
 
-            for (int s = 0; s < totalSheets; s++) {
-                String sheetName = totalSheets == 1
-                        ? sheetBaseName
-                        : sheetBaseName + "_" + (s + 1);
-                Sheet sheet = workbook.createSheet(sheetName);
+            int sheetIndex = 1;
+            int currentRow = 1;
 
-                createHeaderRow(sheet, workbook, fields);
+            for (List<T> page : pages) {
 
-                int fromIndex = s * MAX_ROWS_PER_SHEET;
-                int toIndex = Math.min(fromIndex + MAX_ROWS_PER_SHEET, data.size());
-                List<T> chunk = data.subList(fromIndex, toIndex);
+                for (T item : page) {
 
-                createDataRows(sheet, chunk, fields);
-                autoSizeColumns(sheet, fields);
+                    if (currentRow > maxRowsPerSheet) {
+
+                        sheet = workbook.createSheet(sheetBaseName + "_" + (++sheetIndex));
+                        createHeaderRow(sheet, workbook, fields);
+
+                        currentRow = 1;
+                    }
+
+                    Row row = sheet.createRow(currentRow++);
+
+                    for (Field field : fields) {
+
+                        field.setAccessible(true);
+
+                        if (field.isAnnotationPresent(ExcelColumn.class)) {
+                            ExcelColumn column = field.getAnnotation(ExcelColumn.class);
+
+                            Cell cell = row.createCell(column.col());
+
+                            Object value = field.get(item);
+
+                            if (value != null) {
+                                setCellValue(cell, value, column.type());
+                            } else {
+                                cell.setCellValue("");
+                            }
+                        }
+                    }
+                }
             }
 
             workbook.write(out);
@@ -245,7 +264,6 @@ public class ExcelExporter {
             return out;
 
         } catch (Exception e) {
-            logger.severe("Failed to export multi-sheet Excel: " + e.getMessage());
             throw new RuntimeException("Export Excel failed: " + e.getMessage(), e);
         }
     }

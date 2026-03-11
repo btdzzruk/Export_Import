@@ -136,193 +136,201 @@ public class BookServiceImpl implements BookService {
 
     @Override
     public ByteArrayResource exportBooksToExcel() throws IOException {
+
         try {
-            // Stream từng page thay vì load all vào RAM
-            List<ExportDTO> exportData = new ArrayList<>();
-            AtomicLong index = new AtomicLong(1);
+
             int pageSize = 10_000;
             int pageNum = 0;
 
+            List<List<ExportDTO>> pages = new ArrayList<>();
+
+            AtomicLong index = new AtomicLong(1);
+
             Page<Book> page;
+
             do {
+
                 page = bookRepository.findAll(PageRequest.of(pageNum++, pageSize));
-                page.getContent().forEach(book -> {
+
+                List<ExportDTO> dtoPage = page.getContent().stream().map(book -> {
+
                     ExportDTO dto = new ExportDTO();
+
                     dto.setSTT(index.getAndIncrement());
                     dto.setCode(book.getCode());
                     dto.setTitle(book.getTitle());
                     dto.setAuthor(book.getAuthor());
                     dto.setQuantity(book.getQuantity());
                     dto.setPrice(book.getPrice());
-                    exportData.add(dto);
-                });
+
+                    return dto;
+
+                }).toList();
+
+                pages.add(dtoPage);
+
             } while (page.hasNext());
 
-            if (exportData.isEmpty()) {
-                throw new RuntimeException("Không có dữ liệu để xuất file Excel!");
-            }
-
             ByteArrayOutputStream outputStream =
-                    ExcelExporter.exportToExcelMultiSheet(exportData, "Books");
-
+                    ExcelExporter.exportStreaming(
+                            pages,
+                            ExportDTO.class,
+                            "Books",
+                            100
+                    );
             return new ByteArrayResource(outputStream.toByteArray());
 
-        } catch (RuntimeException e) {
-            throw e;
         } catch (Exception e) {
-            throw new IOException("Lỗi khi xuất Excel: " + e.getMessage(), e);
+            throw new IOException("Lỗi khi export Excel: " + e.getMessage(), e);
         }
     }
 
     @Override
-    @Transactional(propagation = Propagation.NEVER) // Không wrap toàn bộ trong 1 transaction
+    @Transactional(propagation = Propagation.NEVER)
     public ByteArrayResource importBooksFromExcel(MultipartFile file) throws IOException {
 
         if (file == null || file.isEmpty()) {
-            throw new RuntimeException("File Excel không được rỗng!");
+            throw new RuntimeException("File Excel không được trống !");
         }
 
-        List<ImportBookDTO> importData = ExcelImporter.importFromExcel(
-                file.getInputStream(), ImportBookDTO.class
+        List<ImportBookDTO> result = new ArrayList<>();
+
+        // cache dữ liệu trong DB để validate
+        Set<String> existingTitles = bookRepository.findAllTitles();
+        Set<String> titlesInFile = new HashSet<>();
+
+        ExcelImporter.importStreaming(
+                file.getInputStream(),
+                ImportBookDTO.class,
+                IMPORT_BATCH_SIZE,
+                batch -> {
+
+                    validateImportData(batch, existingTitles, titlesInFile);
+
+                    int errorIndex = -1;
+
+                    for (int i = 0; i < batch.size(); i++) {
+                        if ("FAIL".equals(batch.get(i).getStatus())) {
+                            errorIndex = i;
+                            break;
+                        }
+                    }
+
+                    if (errorIndex == -1) {
+
+                        try {
+
+                            saveBatchInTransaction(batch);
+
+                            batch.forEach(dto -> {
+                                dto.setStatus("SUCCESS");
+                                dto.setDescription("Imported thành công !");
+                            });
+
+                        } catch (Exception e) {
+
+                            batch.forEach(dto -> {
+                                dto.setStatus("FAIL");
+                                dto.setDescription("DB error: " + e.getMessage());
+                            });
+                        }
+
+                    } else {
+
+                        List<ImportBookDTO> successRows = new ArrayList<>();
+
+                        for (int i = 0; i < batch.size(); i++) {
+
+                            ImportBookDTO dto = batch.get(i);
+
+                            if (i < errorIndex) {
+
+                                dto.setStatus("SUCCESS");
+                                dto.setDescription("Imported thành công !");
+                                successRows.add(dto);
+
+                            } else if (i > errorIndex) {
+
+                                dto.setStatus("FAIL");
+                                dto.setDescription("Batch này có lỗi ở row trước đó, nên không được import !");
+                            }
+                        }
+
+                        if (!successRows.isEmpty()) {
+                            saveBatchInTransaction(successRows);
+                        }
+                    }
+
+                    result.addAll(batch);
+                }
         );
 
-        if (importData.isEmpty()) {
-            throw new RuntimeException("File Excel không có dữ liệu!");
-        }
+        // export lại file kết quả
+        ByteArrayOutputStream outputStream =
+                ExcelExporter.exportToExcel(result, null);
 
-        // Validate trước — không chạm DB
-        validateImportData(importData);
-
-        // Lưu theo chunk, mỗi chunk là 1 transaction độc lập
-        processInChunks(importData);
-
-        // Xuất báo cáo kết quả
-        ByteArrayOutputStream outputStream = ExcelExporter.exportToExcel(importData, null);
         return new ByteArrayResource(outputStream.toByteArray());
     }
 
-    // Xây dựng danh sách ExportDTO từ danh sách Book để xuất Excel
-    private List<ExportDTO> buildExportDTOs(List<Book> books) {
-        AtomicLong index = new AtomicLong(1);
-        return books.stream().map(book -> {
-            ExportDTO dto = new ExportDTO();
-            dto.setSTT(index.getAndIncrement());
-            dto.setCode(book.getCode());
-            dto.setTitle(book.getTitle());
-            dto.setAuthor(book.getAuthor());
-            dto.setQuantity(book.getQuantity());
-            dto.setPrice(book.getPrice());
-            return dto;
-        }).toList();
-    }
-
-    // Kiểm tra trùng tiêu đề và xây dựng danh sách Book từ dữ liệu import
-    private List<Book> buildBooks(List<ImportBookDTO> importData) {
-
-        return importData.stream().map(dto -> {
-
-            if (bookRepository.existsByTitle(dto.getTitle())) {
-                throw new RuntimeException("Sách đã tồn tại: " + dto.getTitle());
-            }
-
-            Book book = new Book();
-
-            book.setCode(dto.getCode());
-            book.setTitle(dto.getTitle());
-            book.setAuthor(dto.getAuthor());
-            book.setQuantity(dto.getQuantity());
-            book.setPrice(dto.getPrice());
-
-            return book;
-
-        }).toList();
-    }
-
-    private void validateImportData(List<ImportBookDTO> importData) {
-
-        // Cache title đã tồn tại trong DB (1 lần query duy nhất)
-        Set<String> existingTitles = bookRepository.findAllTitles(); // query custom
-
-        // Cache title trong chính file để bắt duplicate nội bộ
-        Set<String> seenTitlesInFile = new HashSet<>();
+    private void validateImportData(
+            List<ImportBookDTO> importData,
+            Set<String> existingTitles,
+            Set<String> titlesInFile) {
 
         for (ImportBookDTO dto : importData) {
+
             StringBuilder error = new StringBuilder();
 
             if (dto.getCode() == null || dto.getCode().isBlank())
-                error.append("Mã sách không được để trống; ");
-
+                error.append("Mã sách đã tồn tại ! ");
             if (dto.getTitle() == null || dto.getTitle().isBlank()) {
-                error.append("Tiêu đề sách không được để trống; ");
-            } else {
-                if (existingTitles.contains(dto.getTitle()))
-                    error.append("Tiêu đề đã tồn tại trong DB; ");
-                if (!seenTitlesInFile.add(dto.getTitle()))
-                    error.append("Tiêu đề bị trùng trong file; ");
-            }
 
-            if (dto.getAuthor() == null || dto.getAuthor().isBlank())
-                error.append("Tác giả không được để trống; ");
+                error.append("Tiêu đề sách đã tồn tại ! ");
+
+            } else {
+
+                if (existingTitles.contains(dto.getTitle()))
+                    error.append("Tiêu đề đã tồn tại trong DB ! ");
+
+                if (!titlesInFile.add(dto.getTitle()))
+                    error.append("Tiêu đề bị trùng trong file ! ");
+            }
 
             if (dto.getQuantity() == null || dto.getQuantity() <= 0)
-                error.append("Số lượng phải > 0; ");
+                error.append("Số lượng phải > 0 ! ");
 
             if (dto.getPrice() == null || dto.getPrice() < 100)
-                error.append("Giá phải >= 100; ");
+                error.append("Giá phải >= 100 ! ");
 
             if (error.length() > 0) {
+
                 dto.setStatus("FAIL");
                 dto.setDescription(error.toString());
+
             } else {
-                dto.setStatus("PENDING"); // Chờ lưu
+
+                dto.setStatus("PENDING");
             }
         }
     }
 
-    private void processInChunks(List<ImportBookDTO> importData) {
-
-        List<ImportBookDTO> pendingRows = importData.stream()
-                .filter(dto -> "PENDING".equals(dto.getStatus()))
-                .collect(Collectors.toList());
-
-        // Chia thành batches
-        List<List<ImportBookDTO>> batches = ListUtils.partition(pendingRows, IMPORT_BATCH_SIZE);
-        // Hoặc dùng Guava: Lists.partition(pendingRows, IMPORT_BATCH_SIZE)
-
-        int chunkIndex = 0;
-        for (List<ImportBookDTO> batch : batches) {
-            try {
-                saveBatchInTransaction(batch); // Mỗi chunk commit độc lập
-                batch.forEach(dto -> {
-                    dto.setStatus("SUCCESS");
-                    dto.setDescription("Imported successfully");
-                });
-                log.info("Chunk {}/{} saved: {} rows", ++chunkIndex, batches.size(), batch.size());
-
-            } catch (Exception e) {
-                // Chunk này lỗi → đánh dấu tất cả row trong chunk là FAIL
-                // Các chunk trước đó đã commit an toàn
-                log.error("Chunk {} failed: {}", chunkIndex, e.getMessage());
-                batch.forEach(dto -> {
-                    dto.setStatus("FAIL");
-                    dto.setDescription("Chunk error: " + e.getMessage());
-                });
-            }
-        }
-    }
-
-    @Transactional(propagation = Propagation.REQUIRES_NEW) // Transaction mới, độc lập
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
     public void saveBatchInTransaction(List<ImportBookDTO> batch) {
+
         List<Book> books = batch.stream().map(dto -> {
+
             Book book = new Book();
+
             book.setCode(dto.getCode());
             book.setTitle(dto.getTitle());
             book.setAuthor(dto.getAuthor());
             book.setQuantity(dto.getQuantity());
             book.setPrice(dto.getPrice());
+
             return book;
+
         }).collect(Collectors.toList());
 
-        bookRepository.saveAll(books); // 1 batch insert
+        bookRepository.saveAll(books);
     }
 }

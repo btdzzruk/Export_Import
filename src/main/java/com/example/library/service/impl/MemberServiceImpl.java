@@ -17,12 +17,16 @@ import org.springframework.core.io.ByteArrayResource;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Propagation;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 import java.util.concurrent.atomic.AtomicLong;
 
 @Service
@@ -30,7 +34,8 @@ import java.util.concurrent.atomic.AtomicLong;
 public class MemberServiceImpl implements MemberService {
 
     private final MemberRepository memberRepository;
-    private static final int DEFAULT_PAGE_SIZE = 4;
+
+    private static final int IMPORT_BATCH_SIZE = 500;
 
     @Override
     public APIResponse<PageData<Member>> findAllMember(int page, int size) {
@@ -132,130 +137,210 @@ public class MemberServiceImpl implements MemberService {
 
     @Override
     public ByteArrayResource exportMembersToExcel() throws IOException {
-        try {
-            List<Member> members = memberRepository.findAll();
-            if (members == null) {
-                throw new RuntimeException("Không có dữ liệu để xuất !");
-            }
 
-            List<MemberExportDTO> exportData = buildMemberExportData(members);
-            if (exportData == null || exportData.isEmpty()) {
-                throw new RuntimeException("Không có dữ liệu để xuất !");
-            }
+        try {
+
+            int pageSize = 10_000;
+            int pageNum = 0;
+
+            List<List<MemberExportDTO>> pages = new ArrayList<>();
+
+            AtomicLong index = new AtomicLong(1);
+
+            Page<Member> page;
+
+            do {
+
+                page = memberRepository.findAll(PageRequest.of(pageNum++, pageSize));
+
+                List<MemberExportDTO> dtoPage = page.getContent().stream().map(member -> {
+
+                    MemberExportDTO dto = new MemberExportDTO();
+
+                    dto.setSTT(index.getAndIncrement());
+                    dto.setCode(member.getCode());
+                    dto.setName(member.getFullName());
+                    dto.setEmail(member.getEmail());
+                    dto.setPhone(member.getPhone());
+                    return dto;
+
+                }).toList();
+
+                pages.add(dtoPage);
+
+            } while (page.hasNext());
 
             ByteArrayOutputStream outputStream =
-                    ExcelExporter.exportToExcel(exportData, null);
+                    ExcelExporter.exportStreaming(
+                            pages,
+                            MemberExportDTO.class,
+                            "Members",
+                            100
+                    );
             return new ByteArrayResource(outputStream.toByteArray());
-            } catch (Exception e) {
-                throw new RuntimeException("Lỗi khi xuất file Excel: " + e.getMessage());
+
+        } catch (Exception e) {
+            throw new IOException("Lỗi khi export Excel: " + e.getMessage(), e);
         }
     }
 
     @Override
+    @Transactional(propagation = Propagation.NEVER)
     public ByteArrayResource importMembersFromExcel(MultipartFile file) throws IOException {
+
         if (file == null || file.isEmpty()) {
-            throw new RuntimeException("File Import không được rỗng!");
+            throw new RuntimeException("File Excel không được trống !");
         }
 
-        List<ImportMemberDTO> importData =
-                ExcelImporter.importFromExcel(
-                        file.getInputStream(),
-                        ImportMemberDTO.class
-                );
+        List<ImportMemberDTO> result = new ArrayList<>();
 
-        List<Member> validMembers = new ArrayList<>();
+        // cache DB
+        Set<String> existingEmails = memberRepository.findAll()
+                .stream()
+                .map(Member::getEmail)
+                .collect(HashSet::new, HashSet::add, HashSet::addAll);
 
-        for (ImportMemberDTO dto : importData) {
+        Set<String> existingPhones = memberRepository.findAll()
+                .stream()
+                .map(Member::getPhone)
+                .collect(HashSet::new, HashSet::add, HashSet::addAll);
 
-            StringBuilder error = new StringBuilder();
+        Set<String> emailsInFile = new HashSet<>();
+        Set<String> phonesInFile = new HashSet<>();
 
-            if (dto.getCode() == null || dto.getCode().isBlank()) {
-                error.append("Mã thành viên không được rỗng; ");
-            }
+        ExcelImporter.importStreaming(
+                file.getInputStream(),
+                ImportMemberDTO.class,
+                IMPORT_BATCH_SIZE,
+                batch -> {
 
-            if (dto.getName() == null || dto.getName().isBlank()) {
-                error.append("Tên thành viên không được để trống !; ");
-            }
+                    validateImportData(batch, existingEmails, existingPhones, emailsInFile, phonesInFile);
 
-            if (dto.getEmail() == null || dto.getEmail().isBlank()) {
-                error.append("Email không được để trống !; ");
-            }
+                    int errorIndex = -1;
 
-            if (dto.getPhone() == null || dto.getPhone().isBlank()) {
-                error.append("Số điện thoại không được để trống !; ");
-            }
+                    for (int i = 0; i < batch.size(); i++) {
+                        if ("FAIL".equals(batch.get(i).getStatus())) {
+                            errorIndex = i;
+                            break;
+                        }
+                    }
 
-            if (memberRepository.existsByEmail(dto.getEmail())) {
-                error.append("Email đã tồn tại !; ");
-            }
+                    if (errorIndex == -1) {
 
-            if (memberRepository.existsByPhone(dto.getPhone())) {
-                error.append("Số điện thoại đã tồn tại !; ");
-            }
+                        try {
 
-            if (error.length() > 0) {
+                            saveBatchInTransaction(batch);
 
-                dto.setStatus("FAIL");
-                dto.setDescription(error.toString());
+                            batch.forEach(dto -> {
+                                dto.setStatus("SUCCESS");
+                                dto.setDescription("Imported thành công !");
+                            });
 
-            } else {
+                        } catch (Exception e) {
 
-                dto.setStatus("TRUE");
-                dto.setDescription("VALID");
+                            batch.forEach(dto -> {
+                                dto.setStatus("FAIL");
+                                dto.setDescription("DB error: " + e.getMessage());
+                            });
+                        }
 
-                Member member = new Member();
-                member.setCode(dto.getCode());
-                member.setFullName(dto.getName());
-                member.setEmail(dto.getEmail());
-                member.setPhone(dto.getPhone());
-                validMembers.add(member);
-            }
-        }
+                    } else {
 
-        if (!validMembers.isEmpty()) {
-            memberRepository.saveAll(validMembers);
-        }
+                        List<ImportMemberDTO> successRows = new ArrayList<>();
+
+                        for (int i = 0; i < batch.size(); i++) {
+
+                            ImportMemberDTO dto = batch.get(i);
+
+                            if (i < errorIndex) {
+
+                                dto.setStatus("SUCCESS");
+                                dto.setDescription("Imported thành công !");
+                                successRows.add(dto);
+
+                            } else if (i > errorIndex) {
+
+                                dto.setStatus("FAIL");
+                                dto.setDescription("Batch này có lỗi ở row trước đó, nên không được import !");
+                            }
+                        }
+
+                        if (!successRows.isEmpty()) {
+                            saveBatchInTransaction(successRows);
+                        }
+                    }
+
+                    result.addAll(batch);
+                }
+        );
 
         ByteArrayOutputStream outputStream =
-                ExcelExporter.exportToExcel(importData, null);
+                ExcelExporter.exportToExcel(result, null);
 
         return new ByteArrayResource(outputStream.toByteArray());
     }
 
-    // Hàm này sẽ chuyển đổi danh sách Member thành danh sách MemberExportDTO để xuất Excel
-    private List<MemberExportDTO> buildMemberExportData(List<Member> members) {
-        AtomicLong counter = new AtomicLong(1);
-        return members.stream().map(member -> {
-            MemberExportDTO dto = new MemberExportDTO();
-            dto.setSTT(counter.getAndIncrement());
-            dto.setCode(member.getCode());
-            dto.setName(member.getFullName());
-            dto.setEmail(member.getEmail());
-            dto.setPhone(member.getPhone());
-            return dto;
-        }).toList();
+    private void validateImportData(
+            List<ImportMemberDTO> batch,
+            Set<String> existingEmails,
+            Set<String> existingPhones,
+            Set<String> emailsInFile,
+            Set<String> phonesInFile
+    ) {
+
+        for (ImportMemberDTO dto : batch) {
+
+            List<String> errors = new ArrayList<>();
+
+            if (dto.getEmail() == null || dto.getEmail().isBlank()) {
+                errors.add("Email không được trống");
+            }
+
+            if (dto.getPhone() == null || dto.getPhone().isBlank()) {
+                errors.add("Phone không được trống");
+            }
+
+            if (existingEmails.contains(dto.getEmail())) {
+                errors.add("Email đã tồn tại trong DB");
+            }
+
+            if (existingPhones.contains(dto.getPhone())) {
+                errors.add("Phone đã tồn tại trong DB");
+            }
+
+            if (!emailsInFile.add(dto.getEmail())) {
+                errors.add("Email bị trùng trong file");
+            }
+
+            if (!phonesInFile.add(dto.getPhone())) {
+                errors.add("Phone bị trùng trong file");
+            }
+
+            if (!errors.isEmpty()) {
+                dto.setStatus("FAIL");
+                dto.setDescription(String.join(" | ", errors));
+            } else {
+                dto.setStatus("PENDING");
+            }
+        }
     }
 
-    // Hàm này sẽ kiểm tra trùng email và phone trước khi tạo đối tượng Member
-    private List<Member> buildMembers(List<ImportMemberDTO> importData) {
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
+    public void saveBatchInTransaction(List<ImportMemberDTO> batch) {
 
-        return importData.stream().map(dto -> {
-
-            if (memberRepository.existsByEmail(dto.getEmail())) {
-                throw new RuntimeException("Email đã tồn tại: " + dto.getEmail());
-            }
-
-            if (memberRepository.existsByPhone(dto.getPhone())) {
-                throw new RuntimeException("Số điện thoại đã tồn tại: " + dto.getPhone());
-            }
+        List<Member> members = batch.stream().map(dto -> {
 
             Member member = new Member();
+
             member.setCode(dto.getCode());
             member.setFullName(dto.getName());
             member.setEmail(dto.getEmail());
             member.setPhone(dto.getPhone());
+
             return member;
 
         }).toList();
+
+        memberRepository.saveAll(members);
     }
 }
