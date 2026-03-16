@@ -563,6 +563,64 @@
           "response": []
         }
       ]
+    },
+    {
+      "name": "Borrow",
+      "item": [
+        {
+          "name": "borrow",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "http://localhost:8080/api/borrows/borrow?memberId=8&bookCode=CODE7",
+              "protocol": "http",
+              "host": [
+                "localhost"
+              ],
+              "port": "8080",
+              "path": [
+                "api",
+                "borrows",
+                "borrow"
+              ],
+              "query": [
+                {
+                  "key": "memberId",
+                  "value": "8"
+                },
+                {
+                  "key": "bookCode",
+                  "value": "CODE7"
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Return",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "http://localhost:8080/api/borrows/return/25",
+              "protocol": "http",
+              "host": [
+                "localhost"
+              ],
+              "port": "8080",
+              "path": [
+                "api",
+                "borrows",
+                "return",
+                "25"
+              ]
+            }
+          },
+          "response": []
+        }
+      ]
     }
   ],
   "event": [

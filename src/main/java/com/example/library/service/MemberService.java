@@ -5,8 +5,6 @@ import com.example.library.model.request.MemberAddDTO;
 import com.example.library.model.request.MemberUpdateDTO;
 import com.example.library.model.response.APIResponse;
 import com.example.library.model.response.PageData;
-import org.springframework.core.io.ByteArrayResource;
-import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
 
@@ -21,8 +19,4 @@ public interface MemberService {
     APIResponse<Member> updateMember(Long id, MemberUpdateDTO request);
 
     APIResponse<String> deleteMemberById(Long id);
-
-    ByteArrayResource exportMembersToExcel() throws IOException;
-
-    ByteArrayResource importMembersFromExcel(MultipartFile file) throws IOException;
 }

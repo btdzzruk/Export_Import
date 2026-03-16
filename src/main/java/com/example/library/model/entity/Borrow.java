@@ -1,5 +1,6 @@
 package com.example.library.model.entity;
 
+import com.example.library.model.entity.enums.BorrowStatus;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
@@ -24,6 +25,10 @@ public class Borrow {
 
     @Column(name = "returnDate")
     private LocalDateTime returnDate;
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "status")
+    private BorrowStatus status; // "BORROWED", "RETURNED", "OVERDUE"
 
     @ManyToOne
     @JoinColumn(name = "book_id")

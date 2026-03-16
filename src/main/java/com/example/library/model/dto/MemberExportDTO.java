@@ -1,7 +1,7 @@
 package com.example.library.model.dto;
 
-import com.example.library.model.ColCellType;
-import com.example.library.model.ExcelColumn;
+import com.example.library.excel.ColCellType;
+import com.example.library.excel.ExcelColumn;
 import lombok.Getter;
 import lombok.Setter;
 

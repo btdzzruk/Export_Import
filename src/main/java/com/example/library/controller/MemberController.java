@@ -5,6 +5,8 @@ import com.example.library.model.request.MemberAddDTO;
 import com.example.library.model.request.MemberUpdateDTO;
 import com.example.library.model.response.APIResponse;
 import com.example.library.model.response.PageData;
+import com.example.library.service.ExportMemberService;
+import com.example.library.service.ImportMemberService;
 import com.example.library.service.MemberService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -14,14 +16,14 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
-import java.io.IOException;
-
 @RestController
 @RequestMapping("/api/members")
 @RequiredArgsConstructor
 public class MemberController {
 
     private final MemberService memberService;
+    private final ExportMemberService exportMemberService;
+    private final ImportMemberService importMemberService;
 
     @GetMapping
     public ResponseEntity<APIResponse<PageData<Member>>> getAllMembers(
@@ -55,7 +57,7 @@ public class MemberController {
     @GetMapping("/export")
     public ResponseEntity<?> exportMembersToExcel() {
         try {
-            ByteArrayResource resource = memberService.exportMembersToExcel();
+            ByteArrayResource resource = exportMemberService.exportMembersToExcel();
             return ResponseEntity.ok()
                     .header("Content-Disposition", "attachment; filename=Export.xlsx")
                     .contentType(org.springframework.http.MediaType.APPLICATION_OCTET_STREAM)
@@ -66,11 +68,11 @@ public class MemberController {
     }
 
     @PostMapping("/import")
-    public ResponseEntity<?> importBooks(@RequestParam("file") MultipartFile file) {
+    public ResponseEntity<?> importBooks(@Valid @RequestParam("file") MultipartFile file) {
 
         try {
 
-            ByteArrayResource resource = memberService.importMembersFromExcel(file);
+            ByteArrayResource resource = importMemberService.importMembersFromExcel(file);
 
             return ResponseEntity.ok()
                     .header("Content-Disposition", "attachment; filename=Import_Result.xlsx")

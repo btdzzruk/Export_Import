@@ -1,13 +1,13 @@
 package com.example.library.model.dto;
 
-import com.example.library.model.ColCellType;
-import com.example.library.model.ExcelColumn;
+import com.example.library.excel.ColCellType;
+import com.example.library.excel.ExcelColumn;
 import lombok.Getter;
 import lombok.Setter;
 
 @Getter
 @Setter
-public class ExportDTO {
+public class ExportBookDTO {
     @ExcelColumn(col = 0, title = "STT", type = ColCellType._INTEGER)
     private Long STT;
 

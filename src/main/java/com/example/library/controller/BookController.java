@@ -6,6 +6,8 @@ import com.example.library.model.request.BookUpdateDTO;
 import com.example.library.model.response.APIResponse;
 import com.example.library.model.response.PageData;
 import com.example.library.service.BookService;
+import com.example.library.service.ExportBookService;
+import com.example.library.service.ImportBookService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.core.io.ByteArrayResource;
@@ -25,6 +27,8 @@ import java.time.format.DateTimeFormatter;
 public class BookController {
 
     private final BookService bookService;
+    private final ExportBookService exportBookService;
+    private final ImportBookService importBookService;
 
     @GetMapping
     public ResponseEntity<APIResponse<PageData<Book>>> findAllBooks(
@@ -57,7 +61,7 @@ public class BookController {
     @GetMapping("/export")
     public ResponseEntity<?> exportBooksToExcel() {
         try {
-            ByteArrayResource resource = bookService.exportBooksToExcel();
+            ByteArrayResource resource = exportBookService.exportBooksToExcel();
             String filename = "Books_" + LocalDate.now().format(DateTimeFormatter.ofPattern("ddMMyyyy")) + ".xlsx";
             return ResponseEntity.ok()
                     .header("Content-Disposition", "attachment; filename=" + filename)
@@ -76,7 +80,7 @@ public class BookController {
     }
 
     @PostMapping("/import")
-    public ResponseEntity<?> importBooks(@RequestParam("file") MultipartFile file) {
+    public ResponseEntity<?> importBooks( @Valid @RequestParam("file") MultipartFile file) {
         try {
             // Giới hạn file size tại controller layer
             long maxFileSize = 50 * 1024 * 1024; // 50MB
@@ -85,7 +89,7 @@ public class BookController {
                         .body(new APIResponse<>(false, "File quá lớn, tối đa 50MB", null));
             }
 
-            ByteArrayResource resource = bookService.importBooksFromExcel(file);
+            ByteArrayResource resource = importBookService.importBooksFromExcel(file);
 
             return ResponseEntity.ok()
                     .header("Content-Disposition", "attachment; filename=Import_Result.xlsx")

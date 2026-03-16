@@ -20,8 +20,4 @@ public interface BookService {
     APIResponse<Book> updateBook(Long id, BookUpdateDTO request);
 
     APIResponse<String> deleteBookById(Long id);
-
-    ByteArrayResource exportBooksToExcel() throws IOException;
-
-    ByteArrayResource importBooksFromExcel(MultipartFile file) throws IOException;
 }
