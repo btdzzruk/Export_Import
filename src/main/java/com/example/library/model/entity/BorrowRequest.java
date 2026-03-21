@@ -1,5 +1,6 @@
 package com.example.library.model.entity;
 
+import com.example.library.model.entity.enums.BorrowRequestStatus;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
@@ -9,39 +10,39 @@ import lombok.Setter;
 import java.time.LocalDateTime;
 
 @Entity
-@Table(name = "members")
+@Table(name = "borrow_requests")
 @NoArgsConstructor
 @AllArgsConstructor
 @Getter
 @Setter
-public class Member {
+public class BorrowRequest {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(name = "code", nullable = false, length = 20, unique = true)
+    @Column(name = "code", nullable = false, length = 20)
     private String code;
 
-    @Column(name = "cccd", nullable = false, unique = true, length = 20)
+    @Column(name = "cccd", nullable = false, length = 20)
     private String cccd;
 
-    @Column(name = "fullName", nullable = false, length = 50)
+    @Column(name = "full_name", nullable = false, length = 50)
     private String fullName;
 
-    @Column(name = "email", nullable = false, length = 50, unique = true)
-    private String email;
+    @Column(name = "book_code", nullable = false, length = 20)
+    private String bookCode; // Mã sách mà thành viên muốn mượn
 
-    @Column(name = "phone", nullable = false, length = 15)
-    private String phone;
+    @Enumerated(EnumType.STRING)
+    @Column(name = "status")
+    private BorrowRequestStatus status;
 
     @Column(name = "created_at", nullable = false)
-    private LocalDateTime createdAt; // thời gian tạo
+    private LocalDateTime createdAt;
 
     @Column(name = "updated_at", nullable = false)
-    private LocalDateTime updatedAt; // thời gian update gần nhất
+    private LocalDateTime updatedAt;
 
-    // Tự động set createdAt và updateAt
     @PrePersist
     public void prePersist() {
         this.createdAt = LocalDateTime.now();

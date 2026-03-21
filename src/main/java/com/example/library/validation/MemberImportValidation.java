@@ -18,8 +18,10 @@ public class MemberImportValidation {
 
     public void validateImportData(
             List<ImportMemberDTO> batch,
+            Set<String> existingCccd,
             Set<String> existingEmails,
             Set<String> existingPhones,
+            Set<String> cccdInFile,
             Set<String> emailsInFile,
             Set<String> phonesInFile
     ) {
@@ -37,6 +39,10 @@ public class MemberImportValidation {
             }
 
             // check duplicate trong DB
+            if (dto.getCccd() != null && existingCccd.contains(dto.getCccd())) {
+                errors.add("CCCD đã tồn tại trong DB");
+            }
+
             if (dto.getEmail() != null && existingEmails.contains(dto.getEmail())) {
                 errors.add("Email đã tồn tại trong DB");
             }
@@ -46,6 +52,10 @@ public class MemberImportValidation {
             }
 
             // check duplicate trong file
+            if (dto.getCccd() !=null && !cccdInFile.add(dto.getCccd())) {
+                errors.add("CCCD bị trùng trong file");
+            }
+
             if (dto.getEmail() != null && !emailsInFile.add(dto.getEmail())) {
                 errors.add("Email bị trùng trong file");
             }

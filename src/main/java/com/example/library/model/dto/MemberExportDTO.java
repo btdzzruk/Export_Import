@@ -15,12 +15,15 @@ public class MemberExportDTO {
     @ExcelColumn(col = 1, title = "Mã thành viên", type = ColCellType._STRING)
     private String code;
 
-    @ExcelColumn(col = 2, title = "Tên thành viên", type = ColCellType._STRING)
+    @ExcelColumn(col = 2, title = "CCCD", type = ColCellType._STRING)
+    private String cccd;
+
+    @ExcelColumn(col = 3, title = "Tên thành viên", type = ColCellType._STRING)
     private String name;
 
-    @ExcelColumn(col = 3, title = "Email", type = ColCellType._STRING)
+    @ExcelColumn(col = 4, title = "Email", type = ColCellType._STRING)
     private String email;
 
-    @ExcelColumn(col = 4, title = "Số điện thoại", type = ColCellType._STRING)
+    @ExcelColumn(col = 5, title = "Số điện thoại", type = ColCellType._STRING)
     private String phone;
 }

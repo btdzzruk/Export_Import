@@ -570,10 +570,29 @@
         {
           "name": "borrow",
           "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "eyJhbGciOiJSUzI1NiIsInR5cCIgOiAiSldUIiwia2lkIiA6ICI4b3E2ZFExUXpENTI5Q2VFRUJCV21UTzNlZmF5VkJmelNKOVJmSXNSX1JRIn0.eyJleHAiOjE3NzQwNzMzOTMsImlhdCI6MTc3NDA3MzA5MywianRpIjoiMTI2YjQyNDgtMzgyMS00N2QwLTk0ZDAtNmY2NTZiZGEyY2E1IiwiaXNzIjoiaHR0cDovL2xvY2FsaG9zdDo5MDkwL3JlYWxtcy9saWJyYXJ5IiwiYXVkIjoiYWNjb3VudCIsInN1YiI6IjdjNjE0MjI3LTE3NDMtNDM5NS1iMjAwLTI5ZWU5MjJmMmM2MiIsInR5cCI6IkJlYXJlciIsImF6cCI6ImR1bmciLCJzZXNzaW9uX3N0YXRlIjoiNWNhNjcyM2ItYWJiNS00ZTY2LThhMjctZGRlMTcwOTNlYjhmIiwiYWNyIjoiMSIsImFsbG93ZWQtb3JpZ2lucyI6WyIvKiJdLCJyZWFsbV9hY2Nlc3MiOnsicm9sZXMiOlsiUk9MRV9VU0VSIiwib2ZmbGluZV9hY2Nlc3MiLCJkZWZhdWx0LXJvbGVzLWxpYnJhcnkiLCJ1bWFfYXV0aG9yaXphdGlvbiJdfSwicmVzb3VyY2VfYWNjZXNzIjp7ImFjY291bnQiOnsicm9sZXMiOlsibWFuYWdlLWFjY291bnQiLCJtYW5hZ2UtYWNjb3VudC1saW5rcyIsInZpZXctcHJvZmlsZSJdfX0sInNjb3BlIjoicHJvZmlsZSBlbWFpbCIsInNpZCI6IjVjYTY3MjNiLWFiYjUtNGU2Ni04YTI3LWRkZTE3MDkzZWI4ZiIsImVtYWlsX3ZlcmlmaWVkIjpmYWxzZSwibmFtZSI6Ik5ndXnhu4VuIFbEg24gQiIsInByZWZlcnJlZF91c2VybmFtZSI6InVzZXIiLCJnaXZlbl9uYW1lIjoiTmd1eeG7hW4gVsSDbiIsImZhbWlseV9uYW1lIjoiQiIsImVtYWlsIjoiaGFudGhvMTEwN0BnbWFpbC5jb20ifQ.TWLOoAn3H2_QojTfEQi5gdLipATKcEdvxbw4zzw7_o7we0XyMwCmRISBwAYtPKQSK01WizMK1qfYPgeU0As20yfkqvHz5tDIsuwMWQNmwaijSsYmtGVLUTJi6nb6u2_zxxy9V2wqkGDzFnR9XfrJMYL09x9s0zDpCdbu9d5N2z1E1qFfNl7pMnc7XJ-0ntP9jPKaOvA-ekDNghtrji8WCAq0-F4uYgg7cz-cgue0QReE7HcoyGdmch0aL_PTluTY0dIbMC3SURsLG6kQnNZKSertaa0vUhpPJ8rk3g8z6YOec4y1qaRWh3gt3RFqxVWZYmNPT_Ooz5wnK888jdZVPA",
+                  "type": "string"
+                }
+              ]
+            },
             "method": "POST",
             "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\r\n  \"cccd\": \"097123456789\",\r\n  \"bookCode\": \"CODE1\",\r\n  \"dueDate\": \"2026-03-21\"\r\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
             "url": {
-              "raw": "http://localhost:8080/api/borrows/borrow?memberId=8&bookCode=CODE7",
+              "raw": "http://localhost:8080/api/borrows/export-slip",
               "protocol": "http",
               "host": [
                 "localhost"
@@ -582,17 +601,7 @@
               "path": [
                 "api",
                 "borrows",
-                "borrow"
-              ],
-              "query": [
-                {
-                  "key": "memberId",
-                  "value": "8"
-                },
-                {
-                  "key": "bookCode",
-                  "value": "CODE7"
-                }
+                "export-slip"
               ]
             }
           },
@@ -615,6 +624,230 @@
                 "borrows",
                 "return",
                 "25"
+              ]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "BorrowRequest",
+      "item": [
+        {
+          "name": "Tạo phiếu mượn",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "eyJhbGciOiJSUzI1NiIsInR5cCIgOiAiSldUIiwia2lkIiA6ICI4b3E2ZFExUXpENTI5Q2VFRUJCV21UTzNlZmF5VkJmelNKOVJmSXNSX1JRIn0.eyJleHAiOjE3NzQwNjYyMTcsImlhdCI6MTc3NDA2NTkxNywianRpIjoiNTUzMWM5YjctNTk1Yi00ZmE2LWE3ODgtNGJmOTFjMDNlZDhhIiwiaXNzIjoiaHR0cDovL2xvY2FsaG9zdDo5MDkwL3JlYWxtcy9saWJyYXJ5IiwiYXVkIjoiYWNjb3VudCIsInN1YiI6IjdjNjE0MjI3LTE3NDMtNDM5NS1iMjAwLTI5ZWU5MjJmMmM2MiIsInR5cCI6IkJlYXJlciIsImF6cCI6ImR1bmciLCJzZXNzaW9uX3N0YXRlIjoiMzRhYzJjZTktOTBmMS00MzM2LTkzMjktZWYzNGU4OWU1NWMwIiwiYWNyIjoiMSIsImFsbG93ZWQtb3JpZ2lucyI6WyIvKiJdLCJyZWFsbV9hY2Nlc3MiOnsicm9sZXMiOlsiUk9MRV9VU0VSIiwib2ZmbGluZV9hY2Nlc3MiLCJkZWZhdWx0LXJvbGVzLWxpYnJhcnkiLCJ1bWFfYXV0aG9yaXphdGlvbiJdfSwicmVzb3VyY2VfYWNjZXNzIjp7ImFjY291bnQiOnsicm9sZXMiOlsibWFuYWdlLWFjY291bnQiLCJtYW5hZ2UtYWNjb3VudC1saW5rcyIsInZpZXctcHJvZmlsZSJdfX0sInNjb3BlIjoicHJvZmlsZSBlbWFpbCIsInNpZCI6IjM0YWMyY2U5LTkwZjEtNDMzNi05MzI5LWVmMzRlODllNTVjMCIsImVtYWlsX3ZlcmlmaWVkIjpmYWxzZSwibmFtZSI6Ik5ndXnhu4VuIFbEg24gQiIsInByZWZlcnJlZF91c2VybmFtZSI6InVzZXIiLCJnaXZlbl9uYW1lIjoiTmd1eeG7hW4gVsSDbiIsImZhbWlseV9uYW1lIjoiQiIsImVtYWlsIjoiaGFudGhvMTEwN0BnbWFpbC5jb20ifQ.b67UAHhe0p-I25o9vOvWc_w-j5eP9ymUX6p6mWTrylRmpM4tI0wZldrwQJSpOzjylkdL-5AHO8fdRe-84yxuN__7N9-P7al9GSkJbEAAUoLtwOVxWn-CnPT3WGK3HxZyogMUIsDE0JLx24c3JxdF-zfI5CWzB6e6WQhgMaGYvrRPmiJuXTMWcsUyzYB6dPzaQX69E-e80Zg87eVjFUt4HGKq08fXbdAzi2JN6wR-Cm8OwYulDmYdzt2StrTP1DqW6YrIE63qyyD6YCHMuZgJt1qq4lRPQWSPGbxepbnQf3aOJ9V4Bb_gK6AqRGlkZ9-7OzBa1hsonGBEBMtYdj2gTw",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/x-www-form-urlencoded"
+              }
+            ],
+            "body": {
+              "mode": "urlencoded",
+              "urlencoded": [
+                {
+                  "type": "text",
+                  "key": "",
+                  "value": "",
+                  "disabled": true
+                },
+                {
+                  "type": "text",
+                  "key": "",
+                  "value": "",
+                  "disabled": true
+                },
+                {
+                  "key": "",
+                  "value": "",
+                  "type": "text",
+                  "uuid": "881ae94a-e337-4aaf-aad7-b15d79a2a499",
+                  "disabled": true
+                }
+              ]
+            },
+            "url": {
+              "raw": "http://localhost:8080/api/borrow-requests/create?cccd=097123456789&bookCode=CODE",
+              "protocol": "http",
+              "host": [
+                "localhost"
+              ],
+              "port": "8080",
+              "path": [
+                "api",
+                "borrow-requests",
+                "create"
+              ],
+              "query": [
+                {
+                  "key": "cccd",
+                  "value": "097123456789"
+                },
+                {
+                  "key": "bookCode",
+                  "value": "CODE"
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "duyệt phiếu mượn",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "eyJhbGciOiJSUzI1NiIsInR5cCIgOiAiSldUIiwia2lkIiA6ICI4b3E2ZFExUXpENTI5Q2VFRUJCV21UTzNlZmF5VkJmelNKOVJmSXNSX1JRIn0.eyJleHAiOjE3NzQwNjYzMTIsImlhdCI6MTc3NDA2NjAxMiwianRpIjoiNTk3ZTU2OTUtMmExYy00NmMwLWI0MDItZjM1MTg4YWVmMjRhIiwiaXNzIjoiaHR0cDovL2xvY2FsaG9zdDo5MDkwL3JlYWxtcy9saWJyYXJ5IiwiYXVkIjoiYWNjb3VudCIsInN1YiI6ImRlNDRkNjA3LTQyZWMtNDVhNS1hYjEyLTJhMWVlN2E2ZjM5ZiIsInR5cCI6IkJlYXJlciIsImF6cCI6ImR1bmciLCJzZXNzaW9uX3N0YXRlIjoiMjI1ZTViM2ItNTg4NC00NGM5LWIxNTktNmJmOWI2MDc2YjQ0IiwiYWNyIjoiMSIsImFsbG93ZWQtb3JpZ2lucyI6WyIvKiJdLCJyZWFsbV9hY2Nlc3MiOnsicm9sZXMiOlsib2ZmbGluZV9hY2Nlc3MiLCJkZWZhdWx0LXJvbGVzLWxpYnJhcnkiLCJST0xFX0FETUlOIiwidW1hX2F1dGhvcml6YXRpb24iXX0sInJlc291cmNlX2FjY2VzcyI6eyJhY2NvdW50Ijp7InJvbGVzIjpbIm1hbmFnZS1hY2NvdW50IiwibWFuYWdlLWFjY291bnQtbGlua3MiLCJ2aWV3LXByb2ZpbGUiXX19LCJzY29wZSI6InByb2ZpbGUgZW1haWwiLCJzaWQiOiIyMjVlNWIzYi01ODg0LTQ0YzktYjE1OS02YmY5YjYwNzZiNDQiLCJlbWFpbF92ZXJpZmllZCI6ZmFsc2UsIm5hbWUiOiJOZ3V54buFbiBWxINuIEMiLCJwcmVmZXJyZWRfdXNlcm5hbWUiOiJhZG1pbiIsImdpdmVuX25hbWUiOiJOZ3V54buFbiBWxINuIiwiZmFtaWx5X25hbWUiOiJDIiwiZW1haWwiOiJkdW5nYnVpMTEwN0BnbWFpbC5jb20ifQ.YQLc2cdvqBkpWuIBBoFFcI8Zv_56bdDHWluvRhQi6l4QGfUS2u2bs8UAqLwMnHGKPH__Z4rZrZKuWTkHlzrH9rUUbVU2dOC7tU-J3bxHRkbsE3htWXIxcIKU_6UexguvgvrNIZhUqf2AvJekPFEhCWrU5M5yd4GJ7KVwNclyBh0T7VNrzlFZocm_nHhvmsayBC-qrsEqxLMihA8V1l15VwBrvTSKBNnL_FHgnffrYWc58d1a9d97LXm9tXpyFQCjhtwfjqCri3d3FSL4CApMW2yjpliMZT7cBcxgbjA1zl-OrPtgGSfvam6gb4Vdq8TmhENj2aJBBKoUp6NU_JAZkQ",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                {
+                  "key": "file",
+                  "type": "file",
+                  "uuid": "2736de0d-a5ca-4ae9-a906-a8cb58d85138",
+                  "src": "/D:/Spring_Boot/Luyen_Tap/Library/src/main/resources/templates/Import1.xlsx"
+                }
+              ]
+            },
+            "url": {
+              "raw": "http://localhost:8080/api/borrow-requests/approve/14",
+              "protocol": "http",
+              "host": [
+                "localhost"
+              ],
+              "port": "8080",
+              "path": [
+                "api",
+                "borrow-requests",
+                "approve",
+                "14"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "từ chối",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                {
+                  "key": "file",
+                  "type": "file",
+                  "uuid": "2736de0d-a5ca-4ae9-a906-a8cb58d85138",
+                  "src": "/D:/Spring_Boot/Luyen_Tap/Library/src/main/resources/templates/Import1.xlsx"
+                }
+              ]
+            },
+            "url": {
+              "raw": "http://localhost:8080/api/borrow-requests/reject/5",
+              "protocol": "http",
+              "host": [
+                "localhost"
+              ],
+              "port": "8080",
+              "path": [
+                "api",
+                "borrow-requests",
+                "reject",
+                "5"
+              ]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Keycloak",
+      "item": [
+        {
+          "name": "login",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "eyJhbGciOiJSUzI1NiIsInR5cCIgOiAiSldUIiwia2lkIiA6ICJ5Umt2WE8tSXc0WTZGTWF4bmVwVDEwUVJoc25jank0cmh1ZUplT2ZDWXRRIn0.eyJleHAiOjE3NzQwMzA5MzUsImlhdCI6MTc3NDAzMDYzNSwianRpIjoib25ydHJvOmEzNWRiYWExLTM5NmEtMWM1Yi1kYmFmLTFiNjk2NjYzMDJhYyIsImlzcyI6Imh0dHA6Ly9sb2NhbGhvc3Q6ODA4MC9yZWFsbXMvbGlicmFyeSIsImF1ZCI6ImFjY291bnQiLCJzdWIiOiJkZWQxMDJmZi1lYzQwLTRiNGUtOGRiNy0zNDk2NjEyNmViNzgiLCJ0eXAiOiJCZWFyZXIiLCJhenAiOiJkdW5nIiwic2lkIjoiNHhyZFVtX0xpOUY1dmxQUGZLM1lwaEVZIiwiYWNyIjoiMSIsInJlYWxtX2FjY2VzcyI6eyJyb2xlcyI6WyJST0xFX1VTRVIiLCJvZmZsaW5lX2FjY2VzcyIsImRlZmF1bHQtcm9sZXMtbGlicmFyeSIsInVtYV9hdXRob3JpemF0aW9uIl19LCJyZXNvdXJjZV9hY2Nlc3MiOnsiYWNjb3VudCI6eyJyb2xlcyI6WyJtYW5hZ2UtYWNjb3VudCIsIm1hbmFnZS1hY2NvdW50LWxpbmtzIiwidmlldy1wcm9maWxlIl19fSwic2NvcGUiOiJwcm9maWxlIGVtYWlsIiwiZW1haWxfdmVyaWZpZWQiOmZhbHNlLCJuYW1lIjoiRMWpbmcgQsO5aSIsInByZWZlcnJlZF91c2VybmFtZSI6InVzZXIiLCJnaXZlbl9uYW1lIjoiRMWpbmciLCJmYW1pbHlfbmFtZSI6IkLDuWkiLCJlbWFpbCI6ImhhbnRobzExMDdAZ21haWwuY29tIn0.m3eZ6K2CUHfZVxvwC0xOx7xmESbfqILK3EtV4EtjdcoUQBVFpLcVX7pxupZgNyYS_AdkUDXmZq7cP00ySsqgmX8PKDwpd40OP1nKTdp3GgNrqus2qnY3ejFBi6kNos4lL16GqcCxvtOcymlxVTUPrSVRreBpLYXAH3Yl-6iVbhbyBdw8XwT8OiTbl3zZXtPJhHu637hbElZ3bxvaUnn8bAJxCBitMsqK7iG3m5aUNefESfcBhUG7u-XdCmpbZN2e7HbNB-Y1VlSSy6qfRes1fgieQPFUpp3YIfeURxf7GzR9xEj769Rv6YL3_w_Ha60S_Nqb7st-FYeAS_mvJqCCDQ",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "urlencoded",
+              "urlencoded": [
+                {
+                  "key": "client_id",
+                  "value": "dung",
+                  "type": "text",
+                  "uuid": "b8a28e81-87bf-4475-a945-2d9286f2e3a0"
+                },
+                {
+                  "key": "client_secret",
+                  "value": "imMfbTawTynXbVGrDH2ly7N6P8EJGZi9",
+                  "type": "text",
+                  "uuid": "8d16ecf2-749f-4a2e-aac6-e8266fbdeccf"
+                },
+                {
+                  "key": "grant_type",
+                  "value": "password",
+                  "type": "text",
+                  "uuid": "8cb359d2-5fae-4e56-be06-67a68abc4959"
+                },
+                {
+                  "key": "username",
+                  "value": "user",
+                  "type": "text",
+                  "uuid": "b70db9bf-bdae-47fa-8c0e-4cd5f26fc0c8"
+                },
+                {
+                  "key": "password",
+                  "value": "123456",
+                  "type": "text",
+                  "uuid": "57104902-ffd5-4b84-88a9-eb4d96e9add1"
+                }
+              ]
+            },
+            "url": {
+              "raw": "http://localhost:9090/realms/library/protocol/openid-connect/token",
+              "protocol": "http",
+              "host": [
+                "localhost"
+              ],
+              "port": "9090",
+              "path": [
+                "realms",
+                "library",
+                "protocol",
+                "openid-connect",
+                "token"
               ]
             }
           },

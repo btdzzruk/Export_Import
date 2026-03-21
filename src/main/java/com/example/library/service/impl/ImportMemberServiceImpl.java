@@ -17,6 +17,7 @@ import org.springframework.web.multipart.MultipartFile;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.util.*;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -37,17 +38,26 @@ public class ImportMemberServiceImpl implements ImportMemberService {
 
         List<ImportMemberDTO> result = new ArrayList<>();
 
-        // lấy dữ liệu hiện có để validate
-        Set<String> existingEmails = memberRepository.findAll()
-                .stream()
+        // load toàn bộ dữ liệu member từ DB để check trùng
+        List<Member> members = memberRepository.findAll();
+
+        Set<String> existingCccd = members.stream()
+                .map(Member::getCccd)
+                .filter(Objects::nonNull)
+                .collect(Collectors.toSet());
+
+        Set<String> existingEmails = members.stream()
                 .map(Member::getEmail)
-                .collect(HashSet::new, HashSet::add, HashSet::addAll);
+                .filter(Objects::nonNull)
+                .collect(Collectors.toSet());
 
-        Set<String> existingPhones = memberRepository.findAll()
-                .stream()
+        Set<String> existingPhones = members.stream()
                 .map(Member::getPhone)
-                .collect(HashSet::new, HashSet::add, HashSet::addAll);
+                .filter(Objects::nonNull)
+                .collect(Collectors.toSet());
 
+        // dùng để check trùng trong file
+        Set<String> cccdInFile = new HashSet<>();
         Set<String> emailsInFile = new HashSet<>();
         Set<String> phonesInFile = new HashSet<>();
 
@@ -59,8 +69,10 @@ public class ImportMemberServiceImpl implements ImportMemberService {
 
                     validation.validateImportData(
                             batch,
+                            existingCccd,
                             existingEmails,
                             existingPhones,
+                            cccdInFile,
                             emailsInFile,
                             phonesInFile
                     );
@@ -72,16 +84,18 @@ public class ImportMemberServiceImpl implements ImportMemberService {
                         if ("PENDING".equals(dto.getStatus())) {
 
                             dto.setStatus("SUCCESS");
-                            dto.setDescription("Imported thành công");
+                            dto.setDescription("Imported thành công !");
 
                             successRows.add(dto);
 
-                            // cập nhật cache
+                            // update cache DB
+                            existingCccd.add(dto.getCccd());
                             existingEmails.add(dto.getEmail());
                             existingPhones.add(dto.getPhone());
                         }
                     }
 
+                    // lưu DB theo batch
                     if (!successRows.isEmpty()) {
                         saveBatchInTransaction(successRows);
                     }
@@ -104,6 +118,7 @@ public class ImportMemberServiceImpl implements ImportMemberService {
             Member member = new Member();
 
             member.setCode(dto.getCode());
+            member.setCccd(dto.getCccd());
             member.setFullName(dto.getName());
             member.setEmail(dto.getEmail());
             member.setPhone(dto.getPhone());
